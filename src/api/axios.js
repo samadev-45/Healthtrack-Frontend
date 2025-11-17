@@ -1,44 +1,45 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 
+// Create API instance
 const api = axios.create({
-  baseURL: "/api",
+  baseURL: "/api",              
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });
 
-// Refresh lock system
+// Refresh lock
 let isRefreshing = false;
 let failedQueue = [];
 
 const processQueue = (error) => {
-  failedQueue.forEach(({ reject, resolve }) => {
-    if (error) reject(error);
-    else resolve(true);
-  });
+  failedQueue.forEach(({ resolve, reject }) =>
+    error ? reject(error) : resolve(true)
+  );
   failedQueue = [];
 };
 
+// Axios response interceptor
 api.interceptors.response.use(
-  (res) => res,
-  async (err) => {
-    const originalRequest = err.config;
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
 
-    if (!err.response || err.response.status !== 401) {
-      return Promise.reject(err);
+    // Not a 401 → return
+    if (!error.response || error.response.status !== 401) {
+      return Promise.reject(error);
     }
 
+    // Already retried → reject
     if (originalRequest._retry) {
-      return Promise.reject(err);
+      return Promise.reject(error);
     }
     originalRequest._retry = true;
 
     const refreshToken = Cookies.get("refresh_token");
+    if (!refreshToken) return Promise.reject(error);
 
-    if (!refreshToken) {
-      return Promise.reject(err); 
-    }
-
+    // Multiple 401 requests → queue them
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         failedQueue.push({ resolve, reject });
@@ -48,14 +49,12 @@ api.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const res = await axios.post(
-        "/api/Auth/refresh",
-        { refreshToken },
-        { baseURL: "/", withCredentials: true }
-      );
+      // USE SAME API INSTANCE (respects proxy)
+      const res = await api.post("/Auth/refresh", { refreshToken });
 
-      if (res.data?.data?.refreshToken) {
-        Cookies.set("refresh_token", res.data.data.refreshToken, {
+      const newToken = res.data?.data?.refreshToken;
+      if (newToken) {
+        Cookies.set("refresh_token", newToken, {
           secure: true,
           sameSite: "None",
         });
@@ -65,12 +64,12 @@ api.interceptors.response.use(
       isRefreshing = false;
 
       return api(originalRequest);
-    } catch (refreshErr) {
-      processQueue(refreshErr);
+    } catch (refreshError) {
+      processQueue(refreshError);
       isRefreshing = false;
       Cookies.remove("refresh_token");
 
-      return Promise.reject(refreshErr);
+      return Promise.reject(refreshError);
     }
   }
 );

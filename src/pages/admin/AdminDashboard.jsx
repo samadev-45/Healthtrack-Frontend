@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { getPendingUsers, toggleUserStatus } from "../../api/admin";
 import toast from "react-hot-toast";
-
+import { logout } from "../../api/auth";
+import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
@@ -42,6 +44,7 @@ export default function AdminDashboard() {
     }
   };
 
+  
   return (
     <div className="p-6">
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>

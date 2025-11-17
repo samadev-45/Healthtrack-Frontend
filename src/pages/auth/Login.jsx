@@ -1,11 +1,19 @@
 import { useState } from "react";
 import { Formik } from "formik";
-import toast from "react-hot-toast";
 import * as Yup from "yup";
-import { login, caretakerRequestOtp, caretakerVerifyOtp } from "../../api/auth";
-import { useDispatch } from "react-redux";
-import { loginSuccess } from "../../store/authSlice";
+import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+
+import {
+  login,
+  caretakerRequestOtp,
+  caretakerVerifyOtp,
+  forgotPasswordRequestOtp,
+  forgotPasswordVerifyOtp,
+} from "../../api/auth";
+
+import { loginSuccess } from "../../store/authSlice";
 
 const ROLES = ["Patient", "Doctor", "Admin", "Caretaker"];
 
@@ -16,12 +24,14 @@ const LoginSchema = Yup.object({
 
 export default function Login() {
   const [selectedRole, setSelectedRole] = useState("Patient");
-  const [step, setStep] = useState(1);
-  const dispatch = useDispatch();
+  const [step, setStep] = useState(1); // caretaker login steps
+  const [fpStep, setFpStep] = useState(0);
+  const [fpEmail, setFpEmail] = useState("");
+
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const getDashboard = (role) => {
-    console.log("➡ Redirecting dashboard for role:", role);
     if (role === "Patient") return "/patientDashboard";
     if (role === "Doctor") return "/doctorDashboard";
     if (role === "Admin") return "/adminDashboard";
@@ -52,7 +62,6 @@ export default function Login() {
               <button
                 key={role}
                 onClick={() => {
-                  console.log("🔄 Switching role:", role);
                   setSelectedRole(role);
                   setStep(1);
                 }}
@@ -72,208 +81,291 @@ export default function Login() {
             Login to continue to HealthTrack
           </p>
 
-          {/* FORMIK */}
-          <Formik
-            initialValues={{ email: "", password: "", otp: "" }}
-            validationSchema={LoginSchema}
-            onSubmit={async (values) => {
-              console.log("➡ Form Submitted:", values);
-              console.log("➡ Selected Role:", selectedRole);
-              try {
-                /** ================================
-                 * NORMAL LOGIN (PATIENT/DOCTOR/ADMIN)
-                 * ================================ */
-                if (selectedRole !== "Caretaker") {
-                  if (!values.password) {
-                    toast.error("Password required");
+          {/* ===================== FORGOT PASSWORD ===================== */}
+          {fpStep > 0 && (
+            <Formik
+              initialValues={{
+                email: "",
+                otp: "",
+                newPassword: "",
+                confirmPassword: "",
+              }}
+              validationSchema={Yup.object({
+                email: Yup.string().email().required(),
+              })}
+              onSubmit={async (values) => {
+                try {
+                  if (fpStep === 1) {
+                    await forgotPasswordRequestOtp({ email: values.email });
+                    setFpEmail(values.email);
+                    toast.success("OTP sent to your email");
+                    setFpStep(2);
                     return;
                   }
 
-                  const res = await login({
-                    email: values.email,
-                    password: values.password,
-                  });
+                  if (fpStep === 2) {
+                    await forgotPasswordVerifyOtp({
+                      email: fpEmail,
+                      otp: values.otp,
+                      newPassword: values.newPassword,
+                      confirmPassword: values.confirmPassword,
+                    });
 
-                  console.log("📥 Login response:", res);
-
-                  // Login failed OR user email not found
-                  if (!res?.success) {
-                    toast.error(res?.message || "Invalid credentials");
-                    return;
+                    toast.success("Password reset successfully!");
+                    setFpStep(0);
                   }
-
-                  // STATUS HANDLING
-                  const status = res?.data?.status || "";
-
-                  if (status === "Pending") {
-                    toast.error("Your account is pending admin approval.");
-                    return;
-                  }
-
-                  if (status === "Rejected") {
-                    toast.error("Your registration was rejected.");
-                    return;
-                  }
-
-                  const user = res.data;
-                  dispatch(loginSuccess(user));
-
-                  toast.success("Login successful!");
-
-                  navigate(getDashboard(user.role));
-                  return;
+                } catch {
+                  toast.error("Failed to reset password");
                 }
+              }}
+            >
+              {({ handleChange, handleSubmit }) => (
+                <form className="space-y-4" onSubmit={handleSubmit}>
+                  {fpStep === 1 && (
+                    <>
+                      <input
+                        type="email"
+                        name="email"
+                        placeholder="Enter your email"
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 bg-gray-100 rounded-lg"
+                      />
 
-                /** ========================
-                 * CARETAKER — SEND OTP
-                 * ======================== */
-                if (selectedRole === "Caretaker" && step === 1) {
-                  console.log("🟦 CARETAKER → Step 1: Send OTP");
+                      <button
+                        type="submit"
+                        className="w-full py-3 bg-blue-600 text-white rounded-lg"
+                      >
+                        Send OTP
+                      </button>
+                    </>
+                  )}
 
-                  const res = await caretakerRequestOtp({
-                    email: values.email,
-                  });
+                  {fpStep === 2 && (
+                    <>
+                      <input
+                        type="text"
+                        name="otp"
+                        placeholder="Enter OTP"
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 bg-gray-100 rounded-lg"
+                      />
 
-                  console.log("📥 OTP request response:", res);
+                      <input
+                        type="password"
+                        name="newPassword"
+                        placeholder="New Password"
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 bg-gray-100 rounded-lg"
+                      />
 
-                  toast.success("OTP sent to your email!");
-                  setStep(2);
-                  return;
-                }
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        placeholder="Confirm Password"
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 bg-gray-100 rounded-lg"
+                      />
 
-                /** ============================
-                 * CARETAKER — VERIFY OTP
-                 * ============================ */
-                if (selectedRole === "Caretaker" && step === 2) {
-                  console.log("🟦 CARETAKER → Step 2: Verify OTP");
+                      <button
+                        type="submit"
+                        className="w-full py-3 bg-blue-600 text-white rounded-lg"
+                      >
+                        Reset Password
+                      </button>
+                    </>
+                  )}
 
-                  const res = await caretakerVerifyOtp({
-                    email: values.email,
-                    otp: values.otp,
-                  });
+                  <p
+                    className="text-center text-sm cursor-pointer text-gray-600 mt-4"
+                    onClick={() => setFpStep(0)}
+                  >
+                    Back to Login
+                  </p>
+                </form>
+              )}
+            </Formik>
+          )}
 
-                  console.log("📥 OTP verify response:", res);
+          {/* ===================== LOGIN FORM ===================== */}
+          {fpStep === 0 && (
+            <Formik
+              initialValues={{ email: "", password: "", otp: "" }}
+              validationSchema={LoginSchema}
+              onSubmit={async (values) => {
+                try {
+                  /** NORMAL LOGIN */
+                  if (selectedRole !== "Caretaker") {
+                    if (!values.password) {
+                      toast.error("Password required");
+                      return;
+                    }
 
-                  if (res.status !== "Approved") {
-                    console.log("🟡 Caretaker pending approval");
-                    toast.success(
-                      "Login successful, waiting for admin approval."
-                    );
-                    return;
-                  }
-
-                  dispatch(
-                    loginSuccess({
-                      fullName: "Caretaker",
+                    const res = await login({
                       email: values.email,
-                      role: "Caretaker",
-                    })
-                  );
+                      password: values.password,
+                    });
 
-                  toast.success("Caretaker login successful!");
-                  navigate("/caretakerDashboard");
+                    if (!res?.success) {
+                      // Handle all backend conditions:
+                      if (res?.message?.includes("pending approval")) {
+                        toast.error("Waiting for admin approval");
+                        return;
+                      }
+
+                      if (res?.message?.includes("rejected")) {
+                        toast.error("Your registration was rejected");
+                        return;
+                      }
+
+                      if (res?.message?.includes("already logged")) {
+                        toast.error(
+                          "You are already logged in on another device"
+                        );
+                        return;
+                      }
+
+                      toast.error("Invalid credentials");
+                      return;
+                    }
+
+                    dispatch(loginSuccess(res.data));
+                    toast.success("Login successful!");
+                    navigate(getDashboard(res.data.role));
+                    return;
+                  }
+
+                  /** CARETAKER – STEP 1 */
+                  if (selectedRole === "Caretaker" && step === 1) {
+                    await caretakerRequestOtp({
+                      email: values.email,
+                      fullName: "Caretaker User",
+                    });
+
+                    toast.success("OTP sent to email!");
+                    setStep(2);
+                    return;
+                  }
+
+                  /** CARETAKER – STEP 2 */
+                  if (selectedRole === "Caretaker" && step === 2) {
+                    const res = await caretakerVerifyOtp({
+                      email: values.email,
+                      otp: values.otp,
+                    });
+
+                    if (res.status !== "Approved") {
+                      toast.error("Waiting for admin approval");
+                      return;
+                    }
+
+                    dispatch(
+                      loginSuccess({
+                        fullName: "Caretaker",
+                        email: values.email,
+                        role: "Caretaker",
+                      })
+                    );
+
+                    toast.success("Login successful!");
+                    navigate("/caretakerDashboard");
+                  }
+                } catch (err) {
+                 toast.error(err.message);
                 }
-              } catch (err) {
-                console.log("🔥 LOGIN ERROR:", err);
-                toast.error("Invalid credentials");
-              }
-            }}
-          >
-            {({ values, errors, handleChange, handleSubmit }) => (
-              <form onSubmit={handleSubmit}>
-                {/* EMAIL */}
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Email address"
-                  className="w-full px-4 py-3 mb-2 bg-gray-100 rounded-lg"
-                  value={values.email}
-                  onChange={(e) => {
-                    console.log("✏️ Email changed:", e.target.value);
-                    handleChange(e);
-                  }}
-                />
-                {errors.email && (
-                  <p className="text-red-600 text-xs mb-3">{errors.email}</p>
-                )}
+              }}
+            >
+              {({ values, errors, handleChange, handleSubmit }) => (
+                <form onSubmit={handleSubmit}>
+                  {/* EMAIL */}
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="Email address"
+                    className="w-full px-4 py-3 mb-2 bg-gray-100 rounded-lg"
+                    value={values.email}
+                    onChange={handleChange}
+                  />
+                  {errors.email && (
+                    <p className="text-red-600 text-xs mb-3">{errors.email}</p>
+                  )}
 
-                {/* PASSWORD (Hidden for caretaker) */}
-                {selectedRole !== "Caretaker" && (
-                  <>
-                    <input
-                      type="password"
-                      name="password"
-                      placeholder="Password"
-                      className="w-full px-4 py-3 mb-2 bg-gray-100 rounded-lg"
-                      value={values.password}
-                      onChange={(e) => {
-                        console.log("✏️ Password changed");
-                        handleChange(e);
-                      }}
-                    />
+                  {/* PASSWORD (NOT FOR CARETAKER) */}
+                  {selectedRole !== "Caretaker" && (
+                    <>
+                      <input
+                        type="password"
+                        name="password"
+                        placeholder="Password"
+                        className="w-full px-4 py-3 mb-4 bg-gray-100 rounded-lg"
+                        value={values.password}
+                        onChange={handleChange}
+                      />
 
-                    <button
-                      type="submit"
-                      className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold"
-                    >
-                      Login
-                    </button>
-                  </>
-                )}
-
-                {/* CARETAKER OTP FLOW */}
-                {selectedRole === "Caretaker" && (
-                  <>
-                    {step === 1 && (
                       <button
                         type="submit"
                         className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold"
                       >
-                        Send OTP
+                        Login
                       </button>
-                    )}
+                    </>
+                  )}
 
-                    {step === 2 && (
-                      <>
-                        <input
-                          type="text"
-                          name="otp"
-                          placeholder="Enter OTP"
-                          className="w-full px-4 py-3 mb-4 bg-gray-100 rounded-lg"
-                          value={values.otp}
-                          onChange={(e) => {
-                            console.log("✏️ OTP changed:", e.target.value);
-                            handleChange(e);
-                          }}
-                        />
-
+                  {/* CARETAKER OTP */}
+                  {selectedRole === "Caretaker" && (
+                    <>
+                      {step === 1 && (
                         <button
                           type="submit"
                           className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold"
                         >
-                          Verify OTP
+                          Send OTP
                         </button>
-                      </>
-                    )}
-                  </>
-                )}
+                      )}
 
-                {/* REGISTER LINK */}
-                <p className="mt-6 text-sm text-center text-gray-600">
-                  Don’t have an account?{" "}
-                  <span
-                    className="text-blue-600 font-bold cursor-pointer"
-                    onClick={() => {
-                      console.log("➡ Redirect to Register");
-                      navigate("/auth/register");
-                    }}
+                      {step === 2 && (
+                        <>
+                          <input
+                            type="text"
+                            name="otp"
+                            placeholder="Enter OTP"
+                            className="w-full px-4 py-3 mb-4 bg-gray-100 rounded-lg"
+                            value={values.otp}
+                            onChange={handleChange}
+                          />
+
+                          <button
+                            type="submit"
+                            className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold"
+                          >
+                            Verify OTP
+                          </button>
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  {/* FORGOT PASSWORD */}
+                  <p
+                    className="text-sm mt-3 text-blue-600 cursor-pointer"
+                    onClick={() => setFpStep(1)}
                   >
-                    Register
-                  </span>
-                </p>
-              </form>
-            )}
-          </Formik>
+                    Forgot Password?
+                  </p>
+
+                  {/* REGISTER LINK */}
+                  <p className="mt-6 text-sm text-center text-gray-600">
+                    Don’t have an account?{" "}
+                    <span
+                      className="text-blue-600 font-bold cursor-pointer"
+                      onClick={() => navigate("/auth/register")}
+                    >
+                      Register
+                    </span>
+                  </p>
+                </form>
+              )}
+            </Formik>
+          )}
         </div>
       </div>
     </div>

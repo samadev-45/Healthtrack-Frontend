@@ -5,11 +5,7 @@ import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import { register } from "../../api/auth";
 
-import {
-  PatientSchema,
-  DoctorSchema,
-  CaretakerSchema,
-} from "../../validation/registerSchemas";
+import { PatientSchema, DoctorSchema } from "../../validation/registerSchemas";
 
 const genderOptions = [
   { value: 1, label: "Male" },
@@ -36,27 +32,24 @@ export default function Register() {
 
   const fadeAnim = {
     hidden: { opacity: 0, y: 10 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.25 } },
+    show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
   };
 
   const getSchema = () => {
     if (role === "Patient") return PatientSchema;
-    if (role === "Doctor") return DoctorSchema;
-    return CaretakerSchema; // caretaker no password needed
+    return DoctorSchema;
   };
 
   const mapRoleToId = (role) => {
     if (role === "Patient") return 1;
-    if (role === "Caretaker") return 2;
     if (role === "Doctor") return 4;
-    return 1;
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-6">
       <div className="bg-white shadow-xl rounded-xl flex flex-col md:flex-row max-w-4xl w-full overflow-hidden">
 
-        {/* LEFT IMAGE */}
+        {/* LEFT SIDE IMAGE */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -72,18 +65,20 @@ export default function Register() {
         {/* RIGHT FORM */}
         <div className="md:w-1/2 w-full p-6 md:p-10">
           <h1 className="text-2xl md:text-3xl font-bold mb-2">Create Your Account</h1>
-          <p className="text-gray-500 mb-6">Join HealthTrack and manage your health effortlessly.</p>
+          <p className="text-gray-500 mb-6">
+            Join HealthTrack and manage your health effortlessly.
+          </p>
 
-          {/* ROLE TABS */}
+          {/* ROLE SWITCH */}
           <div className="flex gap-3 mb-6 overflow-x-auto">
-            {["Patient", "Doctor", "Caretaker"].map((r) => (
+            {["Patient", "Doctor"].map((r) => (
               <button
                 key={r}
                 onClick={() => {
                   setRole(r);
                   setStep(1);
                 }}
-                className={`px-4 py-2 rounded-lg border whitespace-nowrap ${
+                className={`px-4 py-2 rounded-lg border ${
                   role === r
                     ? "bg-blue-600 text-white"
                     : "bg-white text-gray-700 border-gray-300"
@@ -111,27 +106,21 @@ export default function Register() {
               licenseNumber: "",
             }}
             validationSchema={getSchema()}
-            validateOnChange={false}
+            validateOnChange={true}
+            validateOnBlur={true}
             onSubmit={async (values, { setSubmitting }) => {
               try {
                 const payload = {
                   ...values,
                   role: mapRoleToId(role),
-                  gender: values.gender ? Number(values.gender) : null,
+                  gender: Number(values.gender),
                   bloodTypeId: values.bloodTypeId ? Number(values.bloodTypeId) : null,
                   specialtyId: values.specialtyId ? Number(values.specialtyId) : null,
                 };
 
-                // REMOVE PASSWORD FOR CARETAKER BEFORE SENDING
-                if (role === "Caretaker") {
-                  delete payload.password;
-                }
-
                 await register(payload);
-                toast.success("Registered successfully!");
-
-                // redirect to login
-                navigate("/login");
+                toast.success("Registration successful! Awaiting admin approval.");
+                navigate("/auth/login");
               } catch (err) {
                 toast.error("Registration failed");
               } finally {
@@ -139,99 +128,84 @@ export default function Register() {
               }
             }}
           >
-            {({ handleChange, handleSubmit, isSubmitting }) => (
+            {({ handleChange, handleSubmit, errors, touched, values }) => (
               <form onSubmit={handleSubmit}>
-
-                {/* CARETAKER — NO STEPS */}
-                {role === "Caretaker" && (
-                  <motion.div
-                    variants={fadeAnim}
-                    initial="hidden"
-                    animate="show"
-                    className="space-y-4"
-                  >
-                    <input
-                      type="text"
-                      name="fullName"
-                      placeholder="Full Name"
-                      onChange={handleChange}
-                      className="w-full border p-3 rounded-lg"
-                    />
-
-                    <input
-                      type="email"
-                      name="email"
-                      placeholder="Email"
-                      onChange={handleChange}
-                      className="w-full border p-3 rounded-lg"
-                    />
-
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full bg-blue-600 text-white py-3 rounded-lg"
-                    >
-                      {isSubmitting ? "Registering..." : "Register"}
-                    </button>
-
-                    {/* Sign In link */}
-                    <p className="text-center mt-3">
-                      Already have an account?{" "}
-                      <span
-                        className="text-blue-600 cursor-pointer"
-                        onClick={() => navigate("/login")}
-                      >
-                        Sign in
-                      </span>
-                    </p>
-                  </motion.div>
-                )}
-
                 {/* STEP 1 */}
-                {step === 1 && role !== "Caretaker" && (
-                  <motion.div
-                    variants={fadeAnim}
-                    initial="hidden"
-                    animate="show"
-                    className="space-y-4"
-                  >
-                    <input
-                      type="text"
-                      name="fullName"
-                      placeholder="Full Name"
-                      onChange={handleChange}
-                      className="w-full border p-3 rounded-lg"
-                    />
+                {step === 1 && (
+                  <motion.div variants={fadeAnim} initial="hidden" animate="show" className="space-y-4">
 
-                    <input
-                      type="email"
-                      name="email"
-                      placeholder="Email"
-                      onChange={handleChange}
-                      className="w-full border p-3 rounded-lg"
-                    />
+                    {/* Name */}
+                    <div>
+                      <input
+                        name="fullName"
+                        placeholder="Full Name"
+                        onChange={handleChange}
+                        className="w-full border p-3 rounded-lg"
+                      />
+                      {touched.fullName && errors.fullName && (
+                        <p className="text-red-500 text-sm">{errors.fullName}</p>
+                      )}
+                    </div>
 
-                    <input
-                      type="password"
-                      name="password"
-                      placeholder="Password"
-                      onChange={handleChange}
-                      className="w-full border p-3 rounded-lg"
-                    />
+                    {/* Email */}
+                    <div>
+                      <input
+                        name="email"
+                        placeholder="Email"
+                        onChange={handleChange}
+                        className="w-full border p-3 rounded-lg"
+                      />
+                      {touched.email && errors.email && (
+                        <p className="text-red-500 text-sm">{errors.email}</p>
+                      )}
+                    </div>
 
+                    {/* Password */}
+                    <div>
+                      <input
+                        type="password"
+                        name="password"
+                        placeholder="Password"
+                        onChange={handleChange}
+                        className="w-full border p-3 rounded-lg"
+                      />
+                      {touched.password && errors.password && (
+                        <p className="text-red-500 text-sm">{errors.password}</p>
+                      )}
+                    </div>
+
+                    {/* NEXT BUTTON */}
                     <button
                       type="button"
+                      disabled={
+                        !values.fullName ||
+                        !values.email ||
+                        !values.password ||
+                        errors.fullName ||
+                        errors.email ||
+                        errors.password
+                      }
                       onClick={() => setStep(2)}
-                      className="w-full mt-4 bg-blue-600 text-white py-3 rounded-lg"
+                      className={`w-full bg-blue-600 text-white py-3 rounded-lg ${
+                        !values.fullName ||
+                        !values.email ||
+                        !values.password ||
+                        errors.fullName ||
+                        errors.email ||
+                        errors.password
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }`}
                     >
                       Next →
                     </button>
 
+                    {/* Already have account */}
                     <p className="text-center mt-3">
                       Already have an account?{" "}
                       <span
                         className="text-blue-600 cursor-pointer"
-                        onClick={() => navigate("/login")}
+                        onClick={() => navigate("/auth/login")}
                       >
                         Sign in
                       </span>
@@ -240,36 +214,23 @@ export default function Register() {
                 )}
 
                 {/* STEP 2 */}
-                {step === 2 && role !== "Caretaker" && (
-                  <motion.div
-                    variants={fadeAnim}
-                    initial="hidden"
-                    animate="show"
-                    className="space-y-4"
-                  >
-                    {/* PATIENT */}
+                {step === 2 && (
+                  <motion.div variants={fadeAnim} initial="hidden" animate="show" className="space-y-4">
+
+                    {/* PATIENT FIELDS */}
                     {role === "Patient" && (
                       <>
-                        <input
-                          type="date"
-                          name="dateOfBirth"
-                          onChange={handleChange}
-                          className="w-full border p-3 rounded-lg"
-                        />
+                        <input type="date" name="dateOfBirth" onChange={handleChange} className="w-full border p-3 rounded-lg" />
+                        {touched.dateOfBirth && errors.dateOfBirth && (
+                          <p className="text-red-500 text-sm">{errors.dateOfBirth}</p>
+                        )}
 
-                        <input
-                          type="text"
-                          name="phoneNumber"
-                          placeholder="Phone Number"
-                          onChange={handleChange}
-                          className="w-full border p-3 rounded-lg"
-                        />
+                        <input name="phoneNumber" placeholder="Phone Number" onChange={handleChange} className="w-full border p-3 rounded-lg" />
+                        {errors.phoneNumber && touched.phoneNumber && (
+                          <p className="text-red-500 text-sm">{errors.phoneNumber}</p>
+                        )}
 
-                        <select
-                          name="gender"
-                          onChange={handleChange}
-                          className="w-full border p-3 rounded-lg"
-                        >
+                        <select name="gender" onChange={handleChange} className="w-full border p-3 rounded-lg">
                           <option value="">Select Gender</option>
                           {genderOptions.map((g) => (
                             <option key={g.value} value={g.value}>
@@ -277,12 +238,11 @@ export default function Register() {
                             </option>
                           ))}
                         </select>
+                        {errors.gender && touched.gender && (
+                          <p className="text-red-500 text-sm">{errors.gender}</p>
+                        )}
 
-                        <select
-                          name="bloodTypeId"
-                          onChange={handleChange}
-                          className="w-full border p-3 rounded-lg"
-                        >
+                        <select name="bloodTypeId" onChange={handleChange} className="w-full border p-3 rounded-lg">
                           <option value="">Select Blood Type</option>
                           {bloodOptions.map((b) => (
                             <option key={b.id} value={b.id}>
@@ -290,41 +250,20 @@ export default function Register() {
                             </option>
                           ))}
                         </select>
+                        {errors.bloodTypeId && touched.bloodTypeId && (
+                          <p className="text-red-500 text-sm">{errors.bloodTypeId}</p>
+                        )}
 
-                        <input
-                          type="text"
-                          name="address"
-                          placeholder="Address"
-                          onChange={handleChange}
-                          className="w-full border p-3 rounded-lg"
-                        />
-
-                        <input
-                          type="text"
-                          name="emergencyContactName"
-                          placeholder="Emergency Contact Name"
-                          onChange={handleChange}
-                          className="w-full border p-3 rounded-lg"
-                        />
-
-                        <input
-                          type="text"
-                          name="emergencyContactPhone"
-                          placeholder="Emergency Contact Phone"
-                          onChange={handleChange}
-                          className="w-full border p-3 rounded-lg"
-                        />
+                        <input name="address" placeholder="Address" onChange={handleChange} className="w-full border p-3 rounded-lg" />
+                        <input name="emergencyContactName" placeholder="Emergency Contact Name" onChange={handleChange} className="w-full border p-3 rounded-lg" />
+                        <input name="emergencyContactPhone" placeholder="Emergency Contact Phone" onChange={handleChange} className="w-full border p-3 rounded-lg" />
                       </>
                     )}
 
-                    {/* DOCTOR */}
+                    {/* DOCTOR FIELDS */}
                     {role === "Doctor" && (
                       <>
-                        <select
-                          name="gender"
-                          onChange={handleChange}
-                          className="w-full border p-3 rounded-lg"
-                        >
+                        <select name="gender" onChange={handleChange} className="w-full border p-3 rounded-lg">
                           <option value="">Select Gender</option>
                           {genderOptions.map((g) => (
                             <option key={g.value} value={g.value}>
@@ -333,42 +272,21 @@ export default function Register() {
                           ))}
                         </select>
 
-                        <input
-                          type="number"
-                          name="specialtyId"
-                          placeholder="Specialty ID"
-                          onChange={handleChange}
-                          className="w-full border p-3 rounded-lg"
-                        />
-
-                        <input
-                          type="text"
-                          name="licenseNumber"
-                          placeholder="License Number"
-                          onChange={handleChange}
-                          className="w-full border p-3 rounded-lg"
-                        />
+                        <input name="specialtyId" placeholder="Specialty ID" onChange={handleChange} className="w-full border p-3 rounded-lg" />
+                        <input name="licenseNumber" placeholder="License Number" onChange={handleChange} className="w-full border p-3 rounded-lg" />
                       </>
                     )}
 
-                    {/* BUTTONS */}
-                    <div className="flex justify-between mt-4">
-                      <button
-                        type="button"
-                        onClick={() => setStep(1)}
-                        className="px-4 py-2 rounded-lg border"
-                      >
+                    <div className="flex justify-between">
+                      <button type="button" onClick={() => setStep(1)} className="px-4 py-2 border rounded-lg">
                         ← Back
                       </button>
 
                       <button
                         type="submit"
-                        disabled={isSubmitting}
-                        className={`px-6 py-2 rounded-lg text-white ${
-                          isSubmitting ? "bg-gray-400" : "bg-blue-600"
-                        }`}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg"
                       >
-                        {isSubmitting ? "Registering..." : "Register"}
+                        Register
                       </button>
                     </div>
 
@@ -376,7 +294,7 @@ export default function Register() {
                       Already have an account?{" "}
                       <span
                         className="text-blue-600 cursor-pointer"
-                        onClick={() => navigate("/login")}
+                        onClick={() => navigate("/auth/login")}
                       >
                         Sign in
                       </span>
