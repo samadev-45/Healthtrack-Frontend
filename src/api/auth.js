@@ -1,5 +1,4 @@
 import api from "./axios";
-import Cookies from "js-cookie";
 
 /* -------------------------------- LOGIN -------------------------------- */
 export const login = async ({ email, password }) => {
@@ -7,19 +6,11 @@ export const login = async ({ email, password }) => {
 
   try {
     const res = await api.post("/Auth/login", { email, password });
-    const payload = res.data;
 
-    if (payload?.data?.refreshToken) {
-      Cookies.set("refresh_token", payload.data.refreshToken, {
-        secure: true,
-        sameSite: "None",
-      });
-    }
-
-    return payload;
+    // Backend sets cookies → frontend only returns payload
+    return res.data;
 
   } catch (error) {
-
     const status = error.response?.status;
     const backend = error.response?.data;
 
@@ -43,9 +34,6 @@ export const login = async ({ email, password }) => {
   }
 };
 
-
-
-
 /* ------------------------------ REGISTER ------------------------------ */
 export const register = async (payload) => {
   const res = await api.post("/Auth/register", payload);
@@ -67,13 +55,7 @@ export const caretakerVerifyOtp = async ({ email, otp }) => {
     otp,
   });
 
-  if (res.data?.refreshToken) {
-    Cookies.set("refresh_token", res.data.refreshToken, {
-      secure: true,
-      sameSite: "None",
-    });
-  }
-
+  // Cookies are set by backend now → no jwt here
   return res.data;
 };
 
@@ -99,17 +81,11 @@ export const forgotPasswordVerifyOtp = async ({
   return res.data;
 };
 
-
+/* -------------------------------- LOGOUT -------------------------------- */
 export const logout = async () => {
   try {
-    
+    // Server deletes HttpOnly cookies & revokes refresh token
     await api.post("/Auth/logout");
-
-    
-    Cookies.remove("refresh_token", {
-      secure: true,
-      sameSite: "None"
-    });
 
     return { success: true };
   } catch (err) {

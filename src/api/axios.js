@@ -1,73 +1,67 @@
 import axios from "axios";
-import Cookies from "js-cookie";
 
-// Create API instance
+// API Instance
 const api = axios.create({
-  baseURL: "/api",              
-  withCredentials: true,
+  baseURL: "/api",
+  withCredentials: true,  
   headers: { "Content-Type": "application/json" },
 });
 
-// Refresh lock
-let isRefreshing = false;
-let failedQueue = [];
 
-const processQueue = (error) => {
-  failedQueue.forEach(({ resolve, reject }) =>
-    error ? reject(error) : resolve(true)
-  );
-  failedQueue = [];
+let isRefreshing = false;
+let queue = [];
+
+
+const resolveQueue = () => {
+  queue.forEach(({ resolve }) => resolve());
+  queue = [];
 };
 
-// Axios response interceptor
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+const rejectQueue = (error) => {
+  queue.forEach(({ reject }) => reject(error));
+  queue = [];
+};
 
-    // Not a 401 → return
+
+api.interceptors.response.use(
+  (res) => res,
+
+  async (error) => {
+    const original = error.config;
+
+    // Only handle 401
     if (!error.response || error.response.status !== 401) {
       return Promise.reject(error);
     }
 
-    // Already retried → reject
-    if (originalRequest._retry) {
+    // Prevent infinite retries
+    if (original._retry) {
       return Promise.reject(error);
     }
-    originalRequest._retry = true;
+    original._retry = true;
 
-    const refreshToken = Cookies.get("refresh_token");
-    if (!refreshToken) return Promise.reject(error);
-
-    // Multiple 401 requests → queue them
+    // If refresh already happening → enqueue request
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
-        failedQueue.push({ resolve, reject });
-      }).then(() => api(originalRequest));
+        queue.push({ resolve, reject });
+      }).then(() => api(original));
     }
 
+    // Begin refresh
     isRefreshing = true;
 
     try {
-      // USE SAME API INSTANCE (respects proxy)
-      const res = await api.post("/Auth/refresh", { refreshToken });
+     
+      await api.post("/Auth/refresh");
 
-      const newToken = res.data?.data?.refreshToken;
-      if (newToken) {
-        Cookies.set("refresh_token", newToken, {
-          secure: true,
-          sameSite: "None",
-        });
-      }
-
-      processQueue(null);
+      // Resolve queued requests
+      resolveQueue();
       isRefreshing = false;
 
-      return api(originalRequest);
+      return api(original);
     } catch (refreshError) {
-      processQueue(refreshError);
+      rejectQueue(refreshError);
       isRefreshing = false;
-      Cookies.remove("refresh_token");
 
       return Promise.reject(refreshError);
     }

@@ -24,7 +24,7 @@ const LoginSchema = Yup.object({
 
 export default function Login() {
   const [selectedRole, setSelectedRole] = useState("Patient");
-  const [step, setStep] = useState(1); // caretaker login steps
+  const [step, setStep] = useState(1); // caretaker login step
   const [fpStep, setFpStep] = useState(0);
   const [fpEmail, setFpEmail] = useState("");
 
@@ -32,10 +32,18 @@ export default function Login() {
   const dispatch = useDispatch();
 
   const getDashboard = (role) => {
-    if (role === "Patient") return "/patientDashboard";
-    if (role === "Doctor") return "/doctorDashboard";
-    if (role === "Admin") return "/adminDashboard";
-    if (role === "Caretaker") return "/caretakerDashboard";
+    switch (role) {
+      case "Patient":
+        return "/patientDashboard";
+      case "Doctor":
+        return "/doctorDashboard";
+      case "Admin":
+        return "/adminDashboard";
+      case "Caretaker":
+        return "/caretakerDashboard";
+      default:
+        return "/";
+    }
   };
 
   return (
@@ -98,8 +106,8 @@ export default function Login() {
                   if (fpStep === 1) {
                     await forgotPasswordRequestOtp({ email: values.email });
                     setFpEmail(values.email);
-                    toast.success("OTP sent to your email");
                     setFpStep(2);
+                    toast.success("OTP sent to email");
                     return;
                   }
 
@@ -110,9 +118,9 @@ export default function Login() {
                       newPassword: values.newPassword,
                       confirmPassword: values.confirmPassword,
                     });
-
                     toast.success("Password reset successfully!");
                     setFpStep(0);
+                    return;
                   }
                 } catch {
                   toast.error("Failed to reset password");
@@ -205,48 +213,33 @@ export default function Login() {
                       password: values.password,
                     });
 
-                    if (!res?.success) {
-                      // Handle all backend conditions:
-                      if (res?.message?.includes("pending approval")) {
-                        toast.error("Waiting for admin approval");
-                        return;
-                      }
+                    const data = res.data;
 
-                      if (res?.message?.includes("rejected")) {
-                        toast.error("Your registration was rejected");
-                        return;
-                      }
+                    dispatch(
+                      loginSuccess({
+                        fullName: data.fullName,
+                        email: data.email,
+                        role: data.role,
+                      })
+                    );
 
-                      if (res?.message?.includes("already logged")) {
-                        toast.error(
-                          "You are already logged in on another device"
-                        );
-                        return;
-                      }
-
-                      toast.error("Invalid credentials");
-                      return;
-                    }
-
-                    dispatch(loginSuccess(res.data));
                     toast.success("Login successful!");
-                    navigate(getDashboard(res.data.role));
+                    navigate(getDashboard(data.role), { replace: true });
                     return;
                   }
 
-                  /** CARETAKER – STEP 1 */
+                  /** CARETAKER FLOW — STEP 1 */
                   if (selectedRole === "Caretaker" && step === 1) {
                     await caretakerRequestOtp({
                       email: values.email,
                       fullName: "Caretaker User",
                     });
-
                     toast.success("OTP sent to email!");
                     setStep(2);
                     return;
                   }
 
-                  /** CARETAKER – STEP 2 */
+                  /** CARETAKER FLOW — STEP 2 */
                   if (selectedRole === "Caretaker" && step === 2) {
                     const res = await caretakerVerifyOtp({
                       email: values.email,
@@ -267,10 +260,10 @@ export default function Login() {
                     );
 
                     toast.success("Login successful!");
-                    navigate("/caretakerDashboard");
+                    navigate("/caretakerDashboard", { replace: true });
                   }
                 } catch (err) {
-                 toast.error(err.message);
+                  toast.error(err.message);
                 }
               }}
             >
@@ -289,7 +282,7 @@ export default function Login() {
                     <p className="text-red-600 text-xs mb-3">{errors.email}</p>
                   )}
 
-                  {/* PASSWORD (NOT FOR CARETAKER) */}
+                  {/* PASSWORD (Not for caretaker) */}
                   {selectedRole !== "Caretaker" && (
                     <>
                       <input
@@ -352,7 +345,7 @@ export default function Login() {
                     Forgot Password?
                   </p>
 
-                  {/* REGISTER LINK */}
+                  {/* REGISTER */}
                   <p className="mt-6 text-sm text-center text-gray-600">
                     Don’t have an account?{" "}
                     <span

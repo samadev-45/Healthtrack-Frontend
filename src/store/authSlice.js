@@ -26,6 +26,7 @@ const authSlice = createSlice({
       state.fullName = fullName;
       state.email = email;
 
+      // Persist minimal safe user info
       localStorage.setItem(
         "authUser",
         JSON.stringify({
@@ -37,7 +38,7 @@ const authSlice = createSlice({
       );
     },
 
-    logoutUser: (state) => {
+    logoutSuccess: (state) => {
       state.isAuthenticated = false;
       state.role = null;
       state.fullName = null;
@@ -48,5 +49,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { loginSuccess, logoutUser } = authSlice.actions;
+export const { loginSuccess, logoutSuccess } = authSlice.actions;
 export default authSlice.reducer;
