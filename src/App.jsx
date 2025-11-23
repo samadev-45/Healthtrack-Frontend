@@ -5,14 +5,17 @@ import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import CaretakerRequestOtp from "./pages/auth/CaretakerRequestOtp";
 import CaretakerVerifyOtp from "./pages/auth/CaretakerVerifyOtp";
+import PatientDashboard from "./pages/patient/PatientDashboard";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminLayout from "./layout/AdminLayout";
 import AdminUsers from "./pages/admin/AdminUsers";
+import PatientLayout from "./layout/PatientLayout";
+import AppointmentList from "./pages/patient/Appointments/AppointmentList";
+import AppointmentsList from "./pages/patient/Appointments/AppointmentList";
 
-// Dummy dashboards — replace with actual components later
-const PatientDashboard = () => <h1 className="p-10 text-3xl">Patient Dashboard</h1>;
+
 const DoctorDashboard = () => <h1 className="p-10 text-3xl">Doctor Dashboard</h1>;
 
 const CaretakerDashboard = () => <h1 className="p-10 text-3xl">Caretaker Dashboard</h1>;
@@ -32,71 +35,76 @@ export default function App() {
         }}
       />
 
-      <Routes>
-        {/* Default redirect */}
-        <Route path="/" element={<Navigate to="/auth/login" replace />} />
+     <Routes>
+ 
+  <Route path="/" element={<Navigate to="/auth/login" replace />} />
 
-        {/* AUTH PAGES */}
-        <Route path="/auth/login" element={<Login />} />
-        <Route path="/auth/register" element={<Register />} />
-        <Route path="/auth/caretaker-request" element={<CaretakerRequestOtp />} />
-        <Route path="/auth/caretaker-verify" element={<CaretakerVerifyOtp />} />
+ 
+  <Route path="/auth/login" element={<Login />} />
+  <Route path="/auth/register" element={<Register />} />
+  <Route path="/auth/caretaker-request" element={<CaretakerRequestOtp />} />
+  <Route path="/auth/caretaker-verify" element={<CaretakerVerifyOtp />} />
 
-        {/* DASHBOARDS (AUTH REQUIRED) */}
-        <Route
-          path="/patientDashboard"
-          element={
-            <ProtectedRoute allowedRoles={["Patient"]}>
-              <PatientDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/doctorDashboard"
-          element={
-            <ProtectedRoute allowedRoles={["Doctor"]}>
-              <DoctorDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-  path="/adminDashboard"
-  element={
-    <ProtectedRoute allowedRoles={["Admin"]}>
-      <AdminLayout>
-        <AdminDashboard />
-      </AdminLayout>
-    </ProtectedRoute>
-  }
-/>
-
-<Route
-  path="/admin/users"
-  element={
-    <ProtectedRoute allowedRoles={["Admin"]}>
-      <AdminLayout>
-        <AdminUsers />
-      </AdminLayout>
-    </ProtectedRoute>
-  }
-/>
-
-        <Route
-          path="/caretakerDashboard"
-          element={
-            <ProtectedRoute allowedRoles={["Caretaker"]}>
-              <CaretakerDashboard />
-            </ProtectedRoute>
-          }
-        />
-        
+ 
+  <Route
+    path="/patient"
+    element={
+      <ProtectedRoute allowedRoles={["Patient"]}>
+        <PatientLayout />
+      </ProtectedRoute>
+    }
+  >
+    <Route index element={<Navigate to="dashboard" replace />} />
+    <Route path="dashboard" element={<PatientDashboard />} />
+     <Route path="appointments" element={<AppointmentsList />} />
+  </Route>
 
 
-        {/* NOT FOUND → redirect */}
-        <Route path="*" element={<Navigate to="/auth/login" replace />} />
-      </Routes>
+  <Route
+    path="/doctorDashboard"
+    element={
+      <ProtectedRoute allowedRoles={["Doctor"]}>
+        <DoctorDashboard />
+      </ProtectedRoute>
+    }
+  />
+
+ 
+  <Route
+    path="/adminDashboard"
+    element={
+      <ProtectedRoute allowedRoles={["Admin"]}>
+        <AdminLayout>
+          <AdminDashboard />
+        </AdminLayout>
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/admin/users"
+    element={
+      <ProtectedRoute allowedRoles={["Admin"]}>
+        <AdminLayout>
+          <AdminUsers />
+        </AdminLayout>
+      </ProtectedRoute>
+    }
+  />
+
+ 
+  <Route
+    path="/caretakerDashboard"
+    element={
+      <ProtectedRoute allowedRoles={["Caretaker"]}>
+        <CaretakerDashboard />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route path="*" element={<Navigate to="/auth/login" replace />} />
+</Routes>
+
     </BrowserRouter>
   );
 }

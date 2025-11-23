@@ -17,26 +17,22 @@ import { loginSuccess } from "../../store/authSlice";
 
 const ROLES = ["Patient", "Doctor", "Admin", "Caretaker"];
 
-const LoginSchema = Yup.object({
-  email: Yup.string().email("Invalid email").required("Email required"),
-  password: Yup.string(),
-});
-
 export default function Login() {
   const [selectedRole, setSelectedRole] = useState("Patient");
-  const [step, setStep] = useState(1); // caretaker login step
+  const [caretakerStep, setCaretakerStep] = useState(1);
   const [fpStep, setFpStep] = useState(0);
   const [fpEmail, setFpEmail] = useState("");
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
+  // Correct redirect paths
   const getDashboard = (role) => {
     switch (role) {
       case "Patient":
-        return "/patientDashboard";
+        return "/patient/dashboard";
       case "Doctor":
-        return "/doctorDashboard";
+        return "/doctor/dashboard";
       case "Admin":
         return "/adminDashboard";
       case "Caretaker":
@@ -46,9 +42,18 @@ export default function Login() {
     }
   };
 
+  // Validation Schema
+  const LoginSchema = Yup.object({
+    email: Yup.string().email("Invalid email").required("Email required"),
+    password:
+      selectedRole !== "Caretaker"
+        ? Yup.string().required("Password required")
+        : Yup.string(),
+  });
+
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* LEFT IMAGE */}
+      {/* LEFT SIDE */}
       <div className="hidden lg:flex flex-col justify-center items-center w-1/2 bg-blue-600 text-white p-10">
         <h1 className="text-4xl font-bold mb-6">HealthTrack</h1>
         <img
@@ -61,7 +66,7 @@ export default function Login() {
         </p>
       </div>
 
-      {/* RIGHT FORM */}
+      {/* RIGHT SIDE */}
       <div className="flex justify-center items-center w-full lg:w-1/2 p-8">
         <div className="bg-white shadow-xl rounded-2xl p-10 w-full max-w-md">
           {/* ROLE TABS */}
@@ -71,7 +76,7 @@ export default function Login() {
                 key={role}
                 onClick={() => {
                   setSelectedRole(role);
-                  setStep(1);
+                  setCaretakerStep(1);
                 }}
                 className={`text-sm font-semibold pb-2 border-b-2 ${
                   selectedRole === role
@@ -85,11 +90,9 @@ export default function Login() {
           </div>
 
           <h2 className="text-2xl font-bold mb-2">Welcome Back</h2>
-          <p className="text-sm text-gray-500 mb-6">
-            Login to continue to HealthTrack
-          </p>
+          <p className="text-sm text-gray-500 mb-6">Login to continue</p>
 
-          {/* ===================== FORGOT PASSWORD ===================== */}
+          
           {fpStep > 0 && (
             <Formik
               initialValues={{
@@ -98,9 +101,6 @@ export default function Login() {
                 newPassword: "",
                 confirmPassword: "",
               }}
-              validationSchema={Yup.object({
-                email: Yup.string().email().required(),
-              })}
               onSubmit={async (values) => {
                 try {
                   if (fpStep === 1) {
@@ -120,10 +120,9 @@ export default function Login() {
                     });
                     toast.success("Password reset successfully!");
                     setFpStep(0);
-                    return;
                   }
                 } catch {
-                  toast.error("Failed to reset password");
+                  toast.error("Error occurred");
                 }
               }}
             >
@@ -157,7 +156,6 @@ export default function Login() {
                         onChange={handleChange}
                         className="w-full px-4 py-3 bg-gray-100 rounded-lg"
                       />
-
                       <input
                         type="password"
                         name="newPassword"
@@ -165,7 +163,6 @@ export default function Login() {
                         onChange={handleChange}
                         className="w-full px-4 py-3 bg-gray-100 rounded-lg"
                       />
-
                       <input
                         type="password"
                         name="confirmPassword"
@@ -194,14 +191,14 @@ export default function Login() {
             </Formik>
           )}
 
-          {/* ===================== LOGIN FORM ===================== */}
+          
           {fpStep === 0 && (
             <Formik
               initialValues={{ email: "", password: "", otp: "" }}
               validationSchema={LoginSchema}
               onSubmit={async (values) => {
                 try {
-                  /** NORMAL LOGIN */
+                  /** -------------------- NORMAL LOGIN -------------------- **/
                   if (selectedRole !== "Caretaker") {
                     if (!values.password) {
                       toast.error("Password required");
@@ -211,36 +208,37 @@ export default function Login() {
                     const res = await login({
                       email: values.email,
                       password: values.password,
+                      
                     });
-
-                    const data = res.data;
+                    const user =res.data;
 
                     dispatch(
                       loginSuccess({
-                        fullName: data.fullName,
-                        email: data.email,
-                        role: data.role,
+                        token: user.token,
+                        fullName: user.fullName,
+                        email: user.email,
+                        role: user.role,
                       })
                     );
 
                     toast.success("Login successful!");
-                    navigate(getDashboard(data.role), { replace: true });
+                    navigate(getDashboard(user.role), { replace: true });
                     return;
                   }
 
-                  /** CARETAKER FLOW — STEP 1 */
-                  if (selectedRole === "Caretaker" && step === 1) {
+                  /** -------------------- CARETAKER (STEP 1) -------------------- **/
+                  if (selectedRole === "Caretaker" && caretakerStep === 1) {
                     await caretakerRequestOtp({
                       email: values.email,
                       fullName: "Caretaker User",
                     });
                     toast.success("OTP sent to email!");
-                    setStep(2);
+                    setCaretakerStep(2);
                     return;
                   }
 
-                  /** CARETAKER FLOW — STEP 2 */
-                  if (selectedRole === "Caretaker" && step === 2) {
+                  /** -------------------- CARETAKER (STEP 2) -------------------- **/
+                  if (selectedRole === "Caretaker" && caretakerStep === 2) {
                     const res = await caretakerVerifyOtp({
                       email: values.email,
                       otp: values.otp,
@@ -263,7 +261,7 @@ export default function Login() {
                     navigate("/caretakerDashboard", { replace: true });
                   }
                 } catch (err) {
-                  toast.error(err.message);
+                  toast.error(err.response?.data?.message || "Login failed");
                 }
               }}
             >
@@ -303,10 +301,10 @@ export default function Login() {
                     </>
                   )}
 
-                  {/* CARETAKER OTP */}
+                  {/* CARETAKER OTP LOGIN */}
                   {selectedRole === "Caretaker" && (
                     <>
-                      {step === 1 && (
+                      {caretakerStep === 1 && (
                         <button
                           type="submit"
                           className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold"
@@ -315,7 +313,7 @@ export default function Login() {
                         </button>
                       )}
 
-                      {step === 2 && (
+                      {caretakerStep === 2 && (
                         <>
                           <input
                             type="text"
