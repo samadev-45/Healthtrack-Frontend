@@ -8,7 +8,6 @@ export default function PatientLayout({ children }) {
   const dispatch = useDispatch();
 
   const handleLogout = () => {
-    
     dispatch(logoutSuccess());
     navigate("/auth/login");
   };
@@ -28,12 +27,21 @@ export default function PatientLayout({ children }) {
           <NavLink to="/patient/dashboard" className={navItemClass}>
             Dashboard
           </NavLink>
+
           <NavLink to="/patient/appointments" className={navItemClass}>
             Appointments
           </NavLink>
+
+          {/* NEW — Added Consultations link */}
+          <NavLink to="/patient/consultations" className={navItemClass}>
+            Consultations
+          </NavLink>
+          <NavLink to="/patient/healthmetrics" className={navItemClass}>Health Metric</NavLink>
+
           <NavLink to="/patient/profile" className={navItemClass}>
             Profile
           </NavLink>
+
           <button
             onClick={handleLogout}
             className="w-full text-left mt-4 p-3 rounded hover:bg-gray-100"
@@ -46,10 +54,9 @@ export default function PatientLayout({ children }) {
       <main className="flex-1 p-6">
         <header className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Patient Dashboard</h1>
-          <div className="text-sm text-gray-600">Welcome back </div>
+          <div className="text-sm text-gray-600">Welcome back</div>
         </header>
 
-        
         {children ?? <Outlet />}
       </main>
     </div>

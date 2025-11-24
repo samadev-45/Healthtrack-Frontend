@@ -14,6 +14,9 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import PatientLayout from "./layout/PatientLayout";
 import AppointmentList from "./pages/patient/Appointments/AppointmentList";
 import AppointmentsList from "./pages/patient/Appointments/AppointmentList";
+import ConsultationList from "./pages/patient/ConsultationList";
+import ConsultationDetails from "./pages/patient/ConsultationDetails";
+import HealthMetricsDashboard from "./pages/patient/HealthMetricsDashboard";
 
 
 const DoctorDashboard = () => <h1 className="p-10 text-3xl">Doctor Dashboard</h1>;
@@ -101,6 +104,43 @@ export default function App() {
       </ProtectedRoute>
     }
   />
+   
+       
+          <Route
+  path="/patient/consultations"
+  element={
+    <ProtectedRoute roles={['Patient']}>
+      <PatientLayout>
+        <ConsultationList />
+      </PatientLayout>
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/patient/consultations/:consultationId"
+  element={
+    <ProtectedRoute roles={['Patient']}>
+      <PatientLayout>
+        <ConsultationDetails />
+      </PatientLayout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/patient/healthmetrics"
+  element={
+    <ProtectedRoute roles={['Patient']}>
+      <PatientLayout>
+        <HealthMetricsDashboard />
+      </PatientLayout>
+    </ProtectedRoute>
+  }
+/>
+
+       
+      
+
 
   <Route path="*" element={<Navigate to="/auth/login" replace />} />
 </Routes>
