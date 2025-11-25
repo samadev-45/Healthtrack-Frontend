@@ -1,7 +1,11 @@
 // src/pages/patient/HealthMetricsDashboard.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchMyMetrics, fetchTodayAbnormal, fetchTrend } from "../../store/healthMetricsSlice";
+import {
+  fetchMyMetrics,
+  fetchTodayAbnormal,
+  fetchTrend,
+} from "../../store/healthMetricsSlice";
 import MetricCard from "../../components/MetricCard";
 import TrendChart from "../../components/TrendChart";
 import MetricLogModal from "../../components/MetricLogModal";
@@ -19,12 +23,54 @@ export default function HealthMetricsDashboard() {
   // static metric types (prefer: fetch from MetricType endpoint if you add one)
   useEffect(() => {
     setMetricTypes([
-      { MetricTypeId: 1, MetricCode: "bp_sys", DisplayName: "Systolic", Unit: "mmHg", MinValue: 80, MaxValue: 120 },
-      { MetricTypeId: 2, MetricCode: "bp_dia", DisplayName: "Diastolic", Unit: "mmHg", MinValue: 60, MaxValue: 80 },
-      { MetricTypeId: 3, MetricCode: "glucose_fast", DisplayName: "Glucose (Fasting)", Unit: "mg/dL", MinValue: 70, MaxValue: 100 },
-      { MetricTypeId: 4, MetricCode: "glucose_pp", DisplayName: "Glucose (Postprandial)", Unit: "mg/dL", MinValue: 70, MaxValue: 140 },
-      { MetricTypeId: 5, MetricCode: "spo2", DisplayName: "SpO2", Unit: "%", MinValue: 95, MaxValue: null },
-      { MetricTypeId: 6, MetricCode: "heart_rate", DisplayName: "Heart Rate", Unit: "bpm", MinValue: 60, MaxValue: 100 }
+      {
+        MetricTypeId: 1,
+        MetricCode: "bp_sys",
+        DisplayName: "Systolic",
+        Unit: "mmHg",
+        MinValue: 80,
+        MaxValue: 120,
+      },
+      {
+        MetricTypeId: 2,
+        MetricCode: "bp_dia",
+        DisplayName: "Diastolic",
+        Unit: "mmHg",
+        MinValue: 60,
+        MaxValue: 80,
+      },
+      {
+        MetricTypeId: 3,
+        MetricCode: "glucose_fast",
+        DisplayName: "Glucose (Fasting)",
+        Unit: "mg/dL",
+        MinValue: 70,
+        MaxValue: 100,
+      },
+      {
+        MetricTypeId: 4,
+        MetricCode: "glucose_pp",
+        DisplayName: "Glucose (Postprandial)",
+        Unit: "mg/dL",
+        MinValue: 70,
+        MaxValue: 140,
+      },
+      {
+        MetricTypeId: 5,
+        MetricCode: "spo2",
+        DisplayName: "SpO2",
+        Unit: "%",
+        MinValue: 95,
+        MaxValue: null,
+      },
+      {
+        MetricTypeId: 6,
+        MetricCode: "heart_rate",
+        DisplayName: "Heart Rate",
+        Unit: "bpm",
+        MinValue: 60,
+        MaxValue: 100,
+      },
     ]);
   }, []);
 
@@ -66,81 +112,88 @@ export default function HealthMetricsDashboard() {
   const closeModal = () => {
     setModalOpen(false);
   };
-const getStatus = (value, metricType) => {
-  if (value == null || !metricType) 
+  const getStatus = (value, metricType) => {
+    if (value == null || !metricType)
+      return { text: "Normal", class: "text-green-600" };
+
+    const min = metricType.MinValue;
+    const max = metricType.MaxValue;
+
+    if (min != null && value < min)
+      return { text: "Low", class: "text-yellow-600" };
+    if (max != null && value > max)
+      return { text: "High", class: "text-red-600" };
+
     return { text: "Normal", class: "text-green-600" };
+  };
 
-  const min = metricType.MinValue;
-  const max = metricType.MaxValue;
+  const bpStatusSys = getStatus(
+    bpSys?.value,
+    metricTypes.find((m) => m.MetricTypeId === 1)
+  );
+  const bpStatusDia = getStatus(
+    bpDia?.value,
+    metricTypes.find((m) => m.MetricTypeId === 2)
+  );
 
-  if (min != null && value < min) return { text: "Low", class: "text-yellow-600" };
-  if (max != null && value > max) return { text: "High", class: "text-red-600" };
+  const finalBpStatus =
+    bpStatusSys.text !== "Normal" || bpStatusDia.text !== "Normal"
+      ? "Abnormal"
+      : "Normal";
 
-  return { text: "Normal", class: "text-green-600" };
-};
+  const finalBpClass =
+    finalBpStatus === "Normal" ? "text-green-600" : "text-red-600";
 
-const bpStatusSys = getStatus(bpSys?.value, metricTypes.find(m => m.MetricTypeId === 1));
-const bpStatusDia = getStatus(bpDia?.value, metricTypes.find(m => m.MetricTypeId === 2));
+  const glucoseValue = glucoseFasting?.value ?? glucosePP?.value ?? null;
 
-const finalBpStatus =
-  (bpStatusSys.text !== "Normal" || bpStatusDia.text !== "Normal")
-    ? "Abnormal"
-    : "Normal";
+  const glucoseType = glucoseFasting
+    ? metricTypes.find((m) => m.MetricTypeId === 3)
+    : metricTypes.find((m) => m.MetricTypeId === 4);
 
-const finalBpClass =
-  finalBpStatus === "Normal" ? "text-green-600" : "text-red-600";
-
-const glucoseValue =
-  glucoseFasting?.value ??
-  glucosePP?.value ??
-  null;
-
-const glucoseType = glucoseFasting
-  ? metricTypes.find(m => m.MetricTypeId === 3)
-  : metricTypes.find(m => m.MetricTypeId === 4);
-
-const glucoseStatus = getStatus(glucoseValue, glucoseType);
-
+  const glucoseStatus = getStatus(glucoseValue, glucoseType);
 
   return (
     <div className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-2xl font-semibold">Health Metrics</h2>
-          <p className="text-sm text-gray-500">Track and monitor your vital health metrics</p>
+          <p className="text-sm text-gray-500">
+            Track and monitor your vital health metrics
+          </p>
         </div>
         <div>
-          <button onClick={() => openModal()} className="px-4 py-2 bg-blue-600 text-white rounded">Log Vital Signs</button>
+          <button
+            onClick={() => openModal()}
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+          >
+            Log Vital Signs
+          </button>
         </div>
       </div>
 
       {/* top cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <MetricCard
-  title="Blood Pressure"
-  valueDisplay={
-  bpSys?.value != null && bpDia?.value != null
-    ? `${bpSys.value}/${bpDia.value}`
-    : "--/--"
-}
-
-  unit="mmHg"
-  statusText={finalBpStatus}
-  statusClass={finalBpClass}
-  subText="Normal range"
-
-
+          title="Blood Pressure"
+          valueDisplay={
+            bpSys?.value != null && bpDia?.value != null
+              ? `${bpSys.value}/${bpDia.value}`
+              : "--/--"
+          }
+          unit="mmHg"
+          statusText={finalBpStatus}
+          statusClass={finalBpClass}
+          subText="Normal range"
         />
 
         <MetricCard
-  title="Blood Glucose"
-  valueDisplay={glucoseValue ?? "--"}
-  unit="mg/dL"
-  statusText={glucoseStatus.text}
-  statusClass={glucoseStatus.class}
-  subText="Normal range"
-/>
-
+          title="Blood Glucose"
+          valueDisplay={glucoseValue ?? "--"}
+          unit="mg/dL"
+          statusText={glucoseStatus.text}
+          statusClass={glucoseStatus.class}
+          subText="Normal range"
+        />
 
         <MetricCard
           title="Weight"

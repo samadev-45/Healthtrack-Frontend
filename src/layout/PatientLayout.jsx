@@ -41,6 +41,7 @@ export default function PatientLayout({ children }) {
           <NavLink to="/patient/profile" className={navItemClass}>
             Profile
           </NavLink>
+          {/* <NavLink to="/patient/prescriptions" className={navItemClass}>Prescriptions</NavLink> */}
 
           <button
             onClick={handleLogout}
