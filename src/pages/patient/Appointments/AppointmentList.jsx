@@ -37,11 +37,11 @@ export default function AppointmentsList() {
     try {
       setLoading(true);
 
-      const res = await getPatientAppointments({ page, pageSize });
-      const data = res?.data?.data ?? res?.data;
+      // API returns normalized { records, totalCount } directly
+      const data = await getPatientAppointments({ page, pageSize });
 
-      setAppointments(data.records ?? []);
-      setTotal(data.totalCount ?? 0);
+      setAppointments(data?.records ?? []);
+      setTotal(data?.totalCount ?? 0);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load appointments");

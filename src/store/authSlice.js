@@ -1,24 +1,19 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-const storedUser = localStorage.getItem("authUser")
-  ? JSON.parse(localStorage.getItem("authUser"))
-  : {
-      isAuthenticated: false,
-      role: null,
-      fullName: null,
-      email: null,
-    };
+const stored = JSON.parse(localStorage.getItem("authUser") || "{}");
 
-const authSlice = createSlice({
+const initial = {
+  isAuthenticated: stored.isAuthenticated || false,
+  role: stored.role || null,
+  fullName: stored.fullName || null,
+  email: stored.email || null,
+};
+
+const slice = createSlice({
   name: "auth",
-  initialState: {
-    isAuthenticated: storedUser.isAuthenticated,
-    role: storedUser.role,
-    fullName: storedUser.fullName,
-    email: storedUser.email,
-  },
+  initialState: initial,
   reducers: {
-    loginSuccess: (state, action) => {
+    loginSuccess(state, action) {
       const { role, fullName, email } = action.payload;
 
       state.isAuthenticated = true;
@@ -26,7 +21,6 @@ const authSlice = createSlice({
       state.fullName = fullName;
       state.email = email;
 
-      // Persist minimal safe user info
       localStorage.setItem(
         "authUser",
         JSON.stringify({
@@ -38,16 +32,15 @@ const authSlice = createSlice({
       );
     },
 
-    logoutSuccess: (state) => {
+    logoutSuccess(state) {
       state.isAuthenticated = false;
       state.role = null;
       state.fullName = null;
       state.email = null;
-
       localStorage.removeItem("authUser");
     },
   },
 });
 
-export const { loginSuccess, logoutSuccess } = authSlice.actions;
-export default authSlice.reducer;
+export const { loginSuccess, logoutSuccess } = slice.actions;
+export default slice.reducer;

@@ -205,26 +205,25 @@ export default function Login() {
                       return;
                     }
 
-                    const res = await login({
+                    // API now returns normalized camelCase data
+                    const data = await login({
                       email: values.email,
                       password: values.password,
-                      
                     });
-                    const user =res.data;
 
-                    dispatch(
-                      loginSuccess({
-                        token: user.token,
-                        fullName: user.fullName,
-                        email: user.email,
-                        role: user.role,
-                      })
-                    );
+                    // Use camelCase fields from normalized response
+                    const user = {
+                      fullName: data.fullName,
+                      email: data.email,
+                      role: data.role,
+                    };
 
+                    dispatch(loginSuccess(user));
                     toast.success("Login successful!");
                     navigate(getDashboard(user.role), { replace: true });
                     return;
                   }
+
 
                   /** -------------------- CARETAKER (STEP 1) -------------------- **/
                   if (selectedRole === "Caretaker" && caretakerStep === 1) {
@@ -261,7 +260,12 @@ export default function Login() {
                     navigate("/caretakerDashboard", { replace: true });
                   }
                 } catch (err) {
-                  toast.error(err.response?.data?.message || "Login failed");
+                  // Backend returns Message (PascalCase) in error response
+                  const errorMessage = err.response?.data?.Message || 
+                                     err.response?.data?.message || 
+                                     err.message || 
+                                     "Login failed";
+                  toast.error(errorMessage);
                 }
               }}
             >

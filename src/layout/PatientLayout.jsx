@@ -32,7 +32,7 @@ export default function PatientLayout({ children }) {
             Appointments
           </NavLink>
 
-          {/* NEW — Added Consultations link */}
+        
           <NavLink to="/patient/consultations" className={navItemClass}>
             Consultations
           </NavLink>

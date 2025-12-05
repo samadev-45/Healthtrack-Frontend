@@ -1,22 +1,22 @@
-import axios from "./axios";
+import api from "./axios";
+import { normalizeKeys } from "../utils/normalize";
 
 export const getPatientAppointments = ({ status = null, page = 1, pageSize = 10 } = {}) =>
-  axios.get("/Appointment/patient", { params: { status, page, pageSize } });
+  api.get("/Appointment/patient", { params: { status, page, pageSize } })
+     .then(r => normalizeKeys(r.data.Data));
 
-export const createAppointment = (payload) => {
-  console.log(" Sending appointment payload:", payload);
-  return axios.post("/Appointment", payload);
-};
+export const createAppointment = (payload) =>
+  api.post("/Appointment", payload)
+    .then(r => normalizeKeys(r.data.Data));
 
-export const rescheduleAppointment = (appointmentId, payload) =>{
-  console.log("payload:" , payload);
-  return axios.post(`/Appointment/${appointmentId}/reschedule`, payload);
-};
+export const rescheduleAppointment = (id, payload) =>
+  api.post(`/Appointment/${id}/reschedule`, payload)
+    .then(r => normalizeKeys(r.data.Data));
 
-export const cancelAppointment = (appointmentId, payload = {}) =>{
-  return axios.post(`/Appointment/${appointmentId}/cancel`, payload);
-};
+export const cancelAppointment = (id, payload = {}) =>
+  api.post(`/Appointment/${id}/cancel`, payload)
+    .then(r => normalizeKeys(r.data.Data));
 
-export const getAppointmentById = (id) =>{
-  return axios.get(`/Appointment/${id}`);
-};
+export const getAppointmentById = (id) =>
+  api.get(`/Appointment/${id}`)
+    .then(r => normalizeKeys(r.data.Data));

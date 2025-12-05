@@ -23,38 +23,96 @@ const rejectQueue = (error) => {
 };
 
 
+// api.interceptors.response.use(
+//   (res) => res,
+
+//   async (error) => {
+//     const original = error.config;
+
+//     // Only handle 401
+//     if (!error.response || error.response.status !== 401) {
+//       return Promise.reject(error);
+//     }
+
+//     // Prevent infinite retries
+//     if (original._retry) {
+//       return Promise.reject(error);
+//     }
+//     original._retry = true;
+
+//     // If refresh already happening → enqueue request
+//     if (isRefreshing) {
+//       return new Promise((resolve, reject) => {
+//         queue.push({ resolve, reject });
+//       }).then(() => api(original));
+//     }
+
+//     // Begin refresh
+//     isRefreshing = true;
+
+//     try {
+     
+//       await api.post("/Auth/refresh");
+
+//       // Resolve queued requests
+//       resolveQueue();
+//       isRefreshing = false;
+
+//       return api(original);
+//     } catch (refreshError) {
+//       rejectQueue(refreshError);
+//       isRefreshing = false;
+
+//       return Promise.reject(refreshError);
+//     }
+//   }
+// );
+
 api.interceptors.response.use(
   (res) => res,
-
   async (error) => {
     const original = error.config;
+    const url = original?.url || "";
 
-    // Only handle 401
+    // ❌ DO NOT TOUCH LOGIN / LOGOUT / REFRESH
+    if (
+      url.includes("/Auth/login") ||
+      url.includes("/Auth/logout") ||
+      url.includes("/Auth/refresh")
+    ) {
+      return Promise.reject(error);
+    }
+
+    // ❌ If request has NO auth header → do NOT refresh
+    const hasAuthHeader =
+      original.headers["Authorization"] ??
+      original.headers["authorization"];
+
+    if (!hasAuthHeader) {
+      return Promise.reject(error);
+    }
+
+    // ❌ Only refresh on 401
     if (!error.response || error.response.status !== 401) {
       return Promise.reject(error);
     }
 
-    // Prevent infinite retries
     if (original._retry) {
       return Promise.reject(error);
     }
     original._retry = true;
 
-    // If refresh already happening → enqueue request
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         queue.push({ resolve, reject });
       }).then(() => api(original));
     }
 
-    // Begin refresh
     isRefreshing = true;
 
     try {
-     
       await api.post("/Auth/refresh");
 
-      // Resolve queued requests
       resolveQueue();
       isRefreshing = false;
 
@@ -67,5 +125,8 @@ api.interceptors.response.use(
     }
   }
 );
+
+
+
 
 export default api;

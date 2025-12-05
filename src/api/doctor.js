@@ -1,27 +1,12 @@
 import api from "./axios";
+import { normalizeKeys } from "../utils/normalize";
 
-/** ------------------ FETCH ALL DOCTORS ------------------ */
-export const getDoctors = async () => {
-  const res = await api.get("/Doctor/list");
-  return res.data; // returns array of doctors
-};
+/* List doctors */
+export const getDoctors = () =>
+  api.get("/Doctor/list")
+    .then(r => normalizeKeys(r.data.Data));
 
-/** ------------------ FETCH DOCTOR AVAILABILITY ------------------ */
-export const getDoctorAvailability = async (doctorId, date) => {
-  const res = await api.get(`/Doctor/availability/${doctorId}`, {
-    params: { date },
-  });
-
-  return res.data.data; 
-  /**
-   * Expected backend response format:
-   * {
-   *   success: true,
-   *   data: {
-   *     hospital: "Apollo",
-   *     location: "Chennai",
-   *     slots: ["09:00:00", "09:30:00", ...]
-   *   }
-   * }
-   */
-};
+/* Availability */
+export const getDoctorAvailability = (doctorId, date) =>
+  api.get(`/Doctor/availability/${doctorId}`, { params: { date } })
+     .then(r => normalizeKeys(r.data.Data));

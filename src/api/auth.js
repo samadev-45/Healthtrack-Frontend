@@ -1,95 +1,51 @@
 import api from "./axios";
+import { normalizeKeys } from "../utils/normalize";
 
-/* -------------------------------- LOGIN -------------------------------- */
+/* LOGIN */
 export const login = async ({ email, password }) => {
-  console.log("📨 LOGIN REQUEST:", { email, password });
-
   try {
     const res = await api.post("/Auth/login", { email, password });
 
-    // Backend sets cookies → frontend only returns payload
-    return res.data;
+    // Normalize PascalCase → camelCase before returning
+    return normalizeKeys(res.data.Data);
 
   } catch (error) {
     const status = error.response?.status;
     const backend = error.response?.data;
 
-    // Pending / Rejected
-    if (status === 403) {
-      const msg =
-        backend?.message ||
-        backend?.errors?.[0] ||
-        "Your account is not approved";
+    // Backend returns Message (PascalCase)
+    const message = backend?.Message || backend?.message;
 
-      throw new Error(msg);
-    }
+    if (status === 403) throw new Error(message || "Not approved");
+    if (status === 401) throw new Error("Invalid email or password");
 
-    // Invalid password / not found
-    if (status === 401) {
-      throw new Error("Invalid email or password");
-    }
-
-    // Fallback
-    throw new Error(backend?.message || "Something went wrong");
+    throw new Error(message || "Login failed");
   }
 };
 
-/* ------------------------------ REGISTER ------------------------------ */
-export const register = async (payload) => {
-  const res = await api.post("/Auth/register", payload);
-  return res.data;
-};
+/* REGISTER */
+export const register = (payload) =>
+  api.post("/Auth/register", payload)
+    .then(r => normalizeKeys(r.data.Data));
 
-/* ----------------------- CARETAKER EMAIL OTP LOGIN ----------------------- */
-export const caretakerRequestOtp = async (data) => {
-  const res = await api.post("/Auth/caretaker/request-email-otp", {
-    email: data.email,
-    fullName: data.fullName ?? "Caretaker",
-  });
-  return res.data;
-};
+/* CARETAKER FLOW */
+export const caretakerRequestOtp = (data) =>
+  api.post("/Auth/caretaker/request-email-otp", data)
+    .then(r => normalizeKeys(r.data.Data));
 
-export const caretakerVerifyOtp = async ({ email, otp }) => {
-  const res = await api.post("/Auth/caretaker/verify-email-otp", {
-    email,
-    otp,
-  });
+export const caretakerVerifyOtp = (data) =>
+  api.post("/Auth/caretaker/verify-email-otp", data)
+    .then(r => normalizeKeys(r.data.Data));
 
-  // Cookies are set by backend now → no jwt here
-  return res.data;
-};
+/* FORGOT PASSWORD */
+export const forgotPasswordRequestOtp = (payload) =>
+  api.post("/Auth/request-email-Otp", payload)
+    .then(r => normalizeKeys(r.data.Data));
 
-/* --------------------------- FORGOT PASSWORD --------------------------- */
-export const forgotPasswordRequestOtp = async ({ email }) => {
-  const res = await api.post("/Auth/request-email-Otp", { email });
-  return res.data;
-};
+export const forgotPasswordVerifyOtp = (payload) =>
+  api.post("/Auth/Verify-email-Otp", payload)
+    .then(r => normalizeKeys(r.data.Data));
 
-export const forgotPasswordVerifyOtp = async ({
-  email,
-  otp,
-  newPassword,
-  confirmPassword,
-}) => {
-  const res = await api.post("/Auth/Verify-email-Otp", {
-    email,
-    otp,
-    newPassword,
-    confirmPassword,
-  });
-
-  return res.data;
-};
-
-/* -------------------------------- LOGOUT -------------------------------- */
-export const logout = async () => {
-  try {
-    // Server deletes HttpOnly cookies & revokes refresh token
-    await api.post("/Auth/logout");
-
-    return { success: true };
-  } catch (err) {
-    console.error("Logout failed:", err);
-    return { success: false };
-  }
-};
+/* LOGOUT */
+export const logout = () =>
+  api.post("/Auth/logout").then(() => ({ success: true }));

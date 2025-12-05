@@ -1,26 +1,42 @@
-
+// src/components/MetricLogModal.jsx
 import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
-import { postHealthMetric, fetchMyMetrics, fetchTrend } from "../store/healthMetricsSlice";
+import {
+  postMetric,
+  fetchMyMetrics,
+  fetchTrend,
+} from "../store/healthMetricsSlice";
 import toast from "react-hot-toast";
 
-export default function MetricLogModal({ metricTypes = [], open, onClose, defaultMetricTypeId }) {
+export default function MetricLogModal({
+  metricTypes = [],
+  open,
+  onClose,
+  defaultMetricTypeId,
+}) {
   const dispatch = useDispatch();
-  
-  const initialMetricTypeId = defaultMetricTypeId ?? (metricTypes[0]?.MetricTypeId ?? null);
 
-  const [metricTypeId, setMetricTypeId] = useState(initialMetricTypeId);
+  const resolveMetricTypeId = () =>
+    defaultMetricTypeId ??
+    metricTypes[0]?.MetricTypeId ??
+    metricTypes[0]?.metricTypeId ??
+    null;
+
+  const [metricTypeId, setMetricTypeId] = useState(resolveMetricTypeId());
   const [value, setValue] = useState("");
-  const [measuredAt, setMeasuredAt] = useState(new Date().toISOString().slice(0, 16)); // local datetime-local
+  const [measuredAt, setMeasuredAt] = useState(
+    new Date().toISOString().slice(0, 16)
+  );
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
+  /** Reset when modal opens */
   useEffect(() => {
     if (open) {
+      setMetricTypeId(resolveMetricTypeId());
       setValue("");
       setNotes("");
       setMeasuredAt(new Date().toISOString().slice(0, 16));
-      setMetricTypeId(defaultMetricTypeId ?? (metricTypes[0]?.MetricTypeId ?? null));
     }
   }, [open, metricTypes, defaultMetricTypeId]);
 
@@ -28,6 +44,7 @@ export default function MetricLogModal({ metricTypes = [], open, onClose, defaul
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!metricTypeId) {
       toast.error("Please select a metric.");
       return;
@@ -37,48 +54,59 @@ export default function MetricLogModal({ metricTypes = [], open, onClose, defaul
       MetricTypeId: Number(metricTypeId),
       Value: Number(value),
       MeasuredAt: measuredAt ? new Date(measuredAt).toISOString() : undefined,
-      Notes: notes || null
+      Notes: notes || null,
     };
 
     try {
       setSaving(true);
-      // post the metric
-      await dispatch(postHealthMetric(payload)).unwrap();
 
-      // refresh metrics list
+      await dispatch(postxMetric(payload)).unwrap();
+
+      // Refresh both list + trend
       dispatch(fetchMyMetrics({ page: 1, pageSize: 50 }));
-
-      // refresh trend for the metric just posted
       dispatch(fetchTrend({ metricTypeId: Number(metricTypeId), days: 30 }));
+
+      toast.success("Vital logged successfully");
+      onClose();
     } catch (err) {
       console.error(err);
       toast.error("Failed to save metric");
     } finally {
       setSaving(false);
-      toast.success("Vital logged succesfully")
-      onClose();
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <form onSubmit={handleSubmit} className="w-full max-w-md bg-white p-5 rounded shadow">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-md bg-white p-5 rounded shadow"
+      >
         <h3 className="text-lg font-medium mb-3">Log Vital Sign</h3>
 
+        {/* Metric selection */}
         <label className="block text-sm text-gray-600">Metric</label>
         <select
           value={metricTypeId ?? ""}
           onChange={(e) => setMetricTypeId(Number(e.target.value))}
           className="w-full p-2 border rounded mb-3"
         >
-          <option value="" disabled>Select a metric</option>
-          {metricTypes.map((m) => (
-            <option key={m.MetricTypeId} value={m.MetricTypeId}>
-              {m.DisplayName ?? m.displayName}
-            </option>
-          ))}
+          <option value="" disabled>
+            Select a metric
+          </option>
+
+          {metricTypes.map((m) => {
+            const id = m.MetricTypeId ?? m.metricTypeId;
+            const name = m.DisplayName ?? m.displayName;
+            return (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            );
+          })}
         </select>
 
+        {/* Value */}
         <label className="block text-sm text-gray-600">Value</label>
         <input
           value={value}
@@ -87,6 +115,7 @@ export default function MetricLogModal({ metricTypes = [], open, onClose, defaul
           className="w-full p-2 border rounded mb-3"
         />
 
+        {/* Timestamp */}
         <label className="block text-sm text-gray-600">Measured at</label>
         <input
           type="datetime-local"
@@ -95,12 +124,25 @@ export default function MetricLogModal({ metricTypes = [], open, onClose, defaul
           className="w-full p-2 border rounded mb-3"
         />
 
+        {/* Notes */}
         <label className="block text-sm text-gray-600">Notes (optional)</label>
-        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full p-2 border rounded mb-3" />
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="w-full p-2 border rounded mb-3"
+        />
 
+        {/* Buttons */}
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 rounded border">Cancel</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 rounded bg-blue-600 text-white">
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded border">
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-4 py-2 rounded bg-blue-600 text-white"
+          >
             {saving ? "Saving..." : "Save"}
           </button>
         </div>

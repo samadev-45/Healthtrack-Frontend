@@ -207,11 +207,11 @@ export default function HealthMetricsDashboard() {
       {/* trends: two example charts (systolic and diastolic) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div>
-          <TrendChart trend={trendState.dataById[1] ?? null} />
+          <TrendChart trend={trendState[1]?.data ?? null} />
         </div>
 
         <div>
-          <TrendChart trend={trendState.dataById[2] ?? null} />
+          <TrendChart trend={trendState[2]?.data ?? null} />
         </div>
       </div>
 

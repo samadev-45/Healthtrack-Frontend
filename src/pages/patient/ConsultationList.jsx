@@ -1,4 +1,4 @@
-// src/pages/patient/ConsultationList.jsx
+
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchPatientConsultations } from "../../store/consultationsSlice";
@@ -25,16 +25,16 @@ export default function ConsultationList() {
         <>
           <div className="space-y-3">
             {items.map((it) => {
-              const id = it.consultationId ?? it.ConsultationId;
+              const id = it.consultationId;
               return (
                 <div key={id} className="p-3 bg-white rounded shadow-sm flex justify-between items-center">
                   <div>
-                    <div className="font-medium">{it.patientName ?? it.PatientName ?? "Consultation"}</div>
-                    <div className="text-sm text-gray-600">{it.diagnosis ?? it.Diagnosis ?? ""}</div>
-                    <div className="text-xs text-gray-500">{new Date(it.createdOn ?? it.CreatedOn).toLocaleString()}</div>
+                    <div className="font-medium">{it.patientName ?? "Consultation"}</div>
+                    <div className="text-sm text-gray-600">{it.diagnosis ?? ""}</div>
+                    <div className="text-xs text-gray-500">{new Date(it.createdOn).toLocaleString()}</div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="text-sm px-2 py-1 bg-gray-100 rounded">{it.status ?? it.Status}</div>
+                    <div className="text-sm px-2 py-1 bg-gray-100 rounded">{it.status}</div>
                     <Link to={`/patient/consultations/${id}`} className="text-sm px-3 py-1 bg-blue-600 text-white rounded">View</Link>
                   </div>
                 </div>

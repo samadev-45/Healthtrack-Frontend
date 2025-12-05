@@ -20,14 +20,19 @@ import AppointmentsList from "./pages/patient/Appointments/AppointmentList";
 import AdminLayout from "./layout/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
+import PatientProfile from "./pages/patient/PatientProfile";
+import DoctorDashboard from "./pages/doctor/Dashboard";
+import DoctorLayout from "./layout/DoctorLayout";
+import DoctorAppointments from "./pages/doctor/DoctorAppointments";
+import ConsultationPage from "./components/ConsultationPage";
 
-const DoctorDashboard = () => <h1 className="p-10 text-3xl">Doctor Dashboard</h1>;
+
 const CaretakerDashboard = () => <h1 className="p-10 text-3xl">Caretaker Dashboard</h1>;
 
 export default function App() {
   return (
     <BrowserRouter>
-      {/* HOT TOAST */}
+    
       <Toaster
         position="top-right"
         toastOptions={{ duration: 3000, style: { background: "#333", color: "#fff" } }}
@@ -62,17 +67,9 @@ export default function App() {
           {/* <Route path="prescriptions/consultation/:consultationId" element={<PrescriptionDetails />} /> */}
         </Route>
 
-        {/* DOCTOR ROUTES */}
-        <Route
-          path="/doctorDashboard"
-          element={
-            <ProtectedRoute allowedRoles={["Doctor"]}>
-              <DoctorDashboard />
-            </ProtectedRoute>
-          }
-        />
+        
 
-        {/* ADMIN ROUTES */}
+    
         <Route
           path="/adminDashboard"
           element={
@@ -94,8 +91,50 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+  path="/doctor/dashboard"
+  element={
+    <ProtectedRoute allowedRoles={["Doctor"]}>
+      <DoctorLayout>
+        <DoctorDashboard />
+      </DoctorLayout>
+    </ProtectedRoute>
+  }
+/>
 
-        {/* CARETAKER ROUTES */}
+<Route
+  path="/doctor/appointments"
+  element={
+    <ProtectedRoute allowedRoles={["Doctor"]}>
+      <DoctorLayout>
+        <DoctorAppointments />
+      </DoctorLayout>
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/doctor/consultations"
+  element={
+    <ProtectedRoute allowedRoles={["Doctor"]}>
+      <DoctorLayout>
+        <ConsultationList /> {/* doctor version */}
+      </DoctorLayout>
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/doctor/consultation/:consultationId"
+  element={
+    <ProtectedRoute allowedRoles={["Doctor"]}>
+      <DoctorLayout>
+        <ConsultationPage />
+      </DoctorLayout>
+    </ProtectedRoute>
+  }
+/>
+
         <Route
           path="/caretakerDashboard"
           element={
@@ -104,8 +143,20 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        {/* <Route path="profile" element={<PatientProfile />} /> */}
+        <Route
+  path="/patient/profile"
+  element={
+    <ProtectedRoute allowedRoles={["Patient"]}>
+      <PatientLayout>
+        <PatientProfile />
+      </PatientLayout>
+    </ProtectedRoute>
+  }
+/>
 
-        {/* FALLBACK */}
+
+    
         <Route path="*" element={<Navigate to="/auth/login" replace />} />
       </Routes>
     </BrowserRouter>

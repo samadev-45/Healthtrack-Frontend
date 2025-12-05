@@ -10,10 +10,8 @@ export default function PatientDashboard() {
     const fetchDashboard = async () => {
       try {
         setLoading(true);
-        const res = await getPatientDashboard();
-
-        // The actual payload is in res.data.data
-        const payload = res?.data?.data;
+        // API function already returns normalized camelCase data
+        const payload = await getPatientDashboard();
         setData(payload);
       } catch (err) {
         console.error(err);
